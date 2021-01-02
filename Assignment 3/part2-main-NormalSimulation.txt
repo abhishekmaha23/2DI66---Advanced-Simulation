@@ -1,0 +1,172 @@
+from populationdist import get_infection_matrix, get_population
+from simulation import simulate
+import logging
+from util import get_params, initialize_distributions
+from util import LOG_EVENT_DEBUG, LOG_SIMULATION_OUTPUT, LOG_SIMULATION_DEBUG, LOG_RUNS_DEBUG, LOG_RUNS_OUTPUT, \
+    LOG_RESULTS
+import time
+import matplotlib.pyplot as plt
+from visualization import visualize_time_steps_in_population
+import numpy as np
+
+if __name__ == '__main__':
+    # Logging configuration
+    logging.addLevelName(LOG_EVENT_DEBUG, "EVENT_DEBUG")
+    logging.addLevelName(LOG_SIMULATION_DEBUG, "SIMULATION_DEBUG")
+    logging.addLevelName(LOG_SIMULATION_OUTPUT, "SIMULATION_OUTPUT")
+    logging.addLevelName(LOG_RUNS_DEBUG, "RUNS_DEBUG")
+    logging.addLevelName(LOG_RUNS_OUTPUT, "RUNS_OUTPUT")
+    logging.addLevelName(LOG_RESULTS, "RESULTS")
+    logging.basicConfig(level=LOG_RUNS_OUTPUT, format='%(asctime)s :: %(levelname)s :: %(message)s')
+
+    # Number of trials per runs
+    ci_run_size = 20
+    run_size = 300
+    # Initialization
+    for set_number in [1, 2, 3]:
+        params = get_params(set_number)
+        reproducible = True
+        logging.log(LOG_RUNS_OUTPUT, 'Set Number - ' + str(set_number))
+        logging.log(LOG_RUNS_OUTPUT, '---------------------')
+
+        # 0. Creating simple distributions for base functionality, virus dynamic periods
+        time_incubation_period, time_infection_period, time_detection_period = initialize_distributions(params,
+                                                                                                       reproducible)
+        # Collecting simulations over entire set
+        simulation_overall_log = []
+
+        # Output variable store for entire set
+        probability_marko_not_infected = []
+        probability_marko_infected_before_10 = []
+        average_length_simulation = []
+        variance_length_simulation = []
+        mean_number_infections_at_10 = []
+        variance_number_infections_at_10 = []
+        expected_time_infection_marko = []
+        variance_time_infection_marko = []
+
+        for i in range(ci_run_size):
+            # Trial
+            simulation_ci_run_log = []
+            logging.log(LOG_RUNS_OUTPUT, 'CI_Runs- ' + str(i))
+            logging.log(LOG_RUNS_OUTPUT, '---------------------')
+            for trial in range(run_size):
+                # Run
+                logging.log(LOG_RUNS_DEBUG, 'Run- ' + str(trial))
+                logging.log(LOG_RUNS_DEBUG, '---------------------')
+                random_population, lat_list, lon_list = get_population(n=params['n'], p=params['p'])
+                random_infection_matrix = get_infection_matrix(random_population, S=params['S'])
+
+                simulation_stats = simulate(params, random_population, random_infection_matrix, time_incubation_period,
+                                            time_infection_period, time_detection_period, mode='Normal',
+                                            reproducible=reproducible, prob_multiplier=5)
+                simulation_stats.lat_list = lat_list
+                simulation_stats.lon_list = lon_list
+                simulation_overall_log.append(simulation_stats)
+                simulation_ci_run_log.append(simulation_stats)
+
+            # Statistics for entire trial
+            count_of_no_marko_infection = 0
+            count_of_marko_infection_by_10 = 0
+            lengths_of_simulation = []
+            numbers_of_infected_at_10 = []
+            count_of_marko_infection = 0
+            times_of_marko_infection = []
+
+            for simulation in simulation_ci_run_log:
+                if simulation.is_marko_infected_overall is True:
+                    count_of_marko_infection += 1
+                    times_of_marko_infection.append(simulation.time_of_marko_infection)
+                    if simulation.is_marko_infected_by_time_10 is True:
+                        count_of_marko_infection_by_10 += 1
+                else:
+                    count_of_no_marko_infection += 1
+                numbers_of_infected_at_10.append(simulation.number_of_infected_at_time_10 + simulation.number_of_incubated_at_time_10)
+                lengths_of_simulation.append(simulation.time_of_infection_overall)
+
+            probability_marko_not_infected.append(count_of_no_marko_infection/run_size)
+            # if(count_of_marko_infection)
+            if count_of_marko_infection != 0:
+                probability_marko_infected_before_10.append(count_of_marko_infection_by_10/count_of_marko_infection)
+            average_length_simulation.append(np.mean(lengths_of_simulation))
+            variance_length_simulation.append(np.var(lengths_of_simulation))
+            mean_number_infections_at_10.append(np.mean(numbers_of_infected_at_10))
+            variance_number_infections_at_10.append(np.var(numbers_of_infected_at_10))
+            if count_of_marko_infection == 0:
+                logging.log(LOG_RESULTS, 'Marko did not get infected in even a single run in this set')
+            else:
+                expected_time_infection_marko.append(np.mean(times_of_marko_infection))
+                variance_time_infection_marko.append(np.var(times_of_marko_infection))
+
+            # Intermediate counts
+            logging.log(LOG_RUNS_DEBUG, 'Count of Marko not getting infected -' + str(count_of_no_marko_infection))
+            logging.log(LOG_RUNS_DEBUG, 'Count of Marko getting infected -' + str(count_of_marko_infection))
+            logging.log(LOG_RUNS_DEBUG, 'Times of Marko getting infected -' + str(times_of_marko_infection))
+            logging.log(LOG_RUNS_DEBUG, 'Count of Marko getting infected by time 10 -' + str(count_of_marko_infection_by_10))
+            logging.log(LOG_RUNS_DEBUG, 'Number of infected people at time 10 -' + str(numbers_of_infected_at_10))
+            logging.log(LOG_RUNS_DEBUG, 'Length of simulation -' + str(lengths_of_simulation))
+            logging.log(LOG_RUNS_DEBUG, '---------------------')
+
+        # Actual results
+        main_probability_marko_not_infected = np.mean(probability_marko_not_infected)
+        main_probability_marko_infected_before_10 = np.mean(probability_marko_infected_before_10)
+        main_average_length_simulation = np.mean(average_length_simulation)
+        main_variance_length_simulation = np.mean(variance_length_simulation)
+        main_mean_number_infections_at_10 = np.mean(mean_number_infections_at_10)
+        main_variance_number_infections_at_10 = np.mean(variance_number_infections_at_10)
+        main_expected_time_infection_marko = np.mean(expected_time_infection_marko)
+        main_variance_time_infection_marko = np.mean(variance_time_infection_marko)
+
+        ci_std_main_probability_marko_not_infected = np.std(probability_marko_not_infected)
+        ci_std_main_probability_marko_infected_before_10 = np.std(probability_marko_infected_before_10)
+        ci_std_average_length_simulation = np.std(average_length_simulation)
+        ci_std_mean_number_infections_at_10 = np.std(mean_number_infections_at_10)
+        ci_std_expected_time_infection_marko = np.std(expected_time_infection_marko)
+
+        halfwidth_probability_marko_not_infected = 1.96 * ci_std_main_probability_marko_not_infected / (ci_run_size ** 0.5)
+        halfwidth_probability_marko_infected_before_10 =  1.96 * ci_std_main_probability_marko_infected_before_10/ (ci_run_size ** 0.5)
+        halfwidth_average_length_simulation = 1.96 * ci_std_average_length_simulation/ (ci_run_size ** 0.5)
+        halfwidth_mean_number_infections_at_10 = 1.96 * ci_std_mean_number_infections_at_10/ (ci_run_size ** 0.5)
+        halfwidth_expected_time_infection_marko =1.96 * ci_std_expected_time_infection_marko/ (ci_run_size ** 0.5)
+
+        logging.log(LOG_RUNS_OUTPUT, 'Probability of no infection of Marko-\tValue: '  + str(
+            main_probability_marko_not_infected) + '\tHalfwidth:' + str(halfwidth_probability_marko_not_infected))
+        logging.log(LOG_RUNS_OUTPUT, 'Probability of Marko being infected before 10-\tValue:' + str(
+            main_probability_marko_infected_before_10) +'\tHalfwidth:'+ str(halfwidth_probability_marko_infected_before_10))
+        logging.log(LOG_RUNS_OUTPUT, 'Average length of the simulation-\tValue:' + str(
+            main_average_length_simulation) +'\tHalfwidth:'+ str(halfwidth_average_length_simulation))
+        logging.log(LOG_RUNS_OUTPUT, 'Variance of the simulation length-\tValue' + str(main_variance_length_simulation))
+        logging.log(LOG_RUNS_OUTPUT, 'Expected number of infections at t=10-\tValue'+ str(
+            main_mean_number_infections_at_10) +'\tHalfwidth:'+ str(halfwidth_mean_number_infections_at_10))
+        logging.log(LOG_RUNS_OUTPUT, 'Variance of the infections at t=10-\tValue:' + str(main_variance_number_infections_at_10))
+        logging.log(LOG_RUNS_OUTPUT, 'Expected time of infection of Marko when he is infected-\tValue:' + str(
+            main_expected_time_infection_marko) +'\tHalfwidth:'+ str(halfwidth_expected_time_infection_marko))
+        logging.log(LOG_RUNS_OUTPUT, 'Variance of time of infection of Marko when he is infected-\tValue' + str(
+            main_variance_time_infection_marko))
+        logging.log(LOG_RUNS_OUTPUT, '---------------------------------')
+
+        # Visualization of a typical distribution around the mean of the simulation period
+        sorted_simulations = sorted(simulation_overall_log, key=lambda self: self.number_infected_and_recovered)
+        mean = sum(i.number_infected_and_recovered for i in sorted_simulations)/len(sorted_simulations)
+        simulation_index = next(simulation[0] for simulation in enumerate(sorted_simulations) if simulation[1].number_infected_and_recovered > mean)
+
+        simulation_for_visualization = simulation_overall_log[simulation_index]
+        logging.log(LOG_RUNS_DEBUG, 'Set number 1 completed.')
+        logging.log(LOG_RUNS_DEBUG, 'Visualization of set 1 shown through sample -\n' + str(simulation_for_visualization))
+
+        multipliers_plot = plt.figure()
+        plt.ylabel('Number of people per state')
+        plt.xlabel('Time - Set' + str(set_number))
+
+        infected_component_numbers = [simulation_for_visualization.state_incubated_number, simulation_for_visualization.state_infected_number]
+        simulation_infected_number_list = list(map(sum, zip(*infected_component_numbers)))
+
+        plt.plot(simulation_for_visualization.times, simulation_for_visualization.state_healthy_number, 'b-')  # Healthy
+        plt.plot(simulation_for_visualization.times, simulation_for_visualization.state_recovered_number, 'g-')  # Recovered
+        plt.plot(simulation_for_visualization.times, simulation_infected_number_list, 'r-')  # Infected
+
+        plt.legend(['Susceptibles', 'Recovered', 'Infected'])
+        plt.show()
+
+        # Visualize the world-map along with progress of virus spread
+        visualize_time_steps_in_population(simulation_for_visualization)

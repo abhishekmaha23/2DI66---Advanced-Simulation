@@ -1,0 +1,58 @@
+from populationdist import get_infection_matrix, get_population
+from simulation import simulate
+import logging
+from util import get_params, initialize_distributions
+from util import LOG_EVENT_DEBUG, LOG_SIMULATION_OUTPUT, LOG_SIMULATION_DEBUG, LOG_RUNS_DEBUG, LOG_RUNS_OUTPUT, LOG_RESULTS
+import time
+import matplotlib.pyplot as plt
+
+if __name__ == '__main__':
+    # Initialization
+    params = get_params(1)
+    reproducible = True
+    # Logging configuration
+    logging.addLevelName(LOG_EVENT_DEBUG, "EVENT_DEBUG")
+    logging.addLevelName(LOG_SIMULATION_DEBUG, "SIMULATION_DEBUG")
+    logging.addLevelName(LOG_SIMULATION_OUTPUT, "SIMULATION_OUTPUT")
+    logging.addLevelName(LOG_RUNS_DEBUG, "RUNS_DEBUG")
+    logging.addLevelName(LOG_RUNS_OUTPUT, "RUNS_OUTPUT")
+    logging.addLevelName(LOG_RESULTS, "RESULTS")
+    logging.basicConfig(level=LOG_RUNS_DEBUG, format='%(asctime)s :: %(levelname)s :: %(message)s')
+
+    # 0. Creating simple distributions for base functionality, virus dynamic periods
+    time_incubation_period, time_infection_period, time_detection_period = initialize_distributions(params, reproducible)
+
+    # Testing multipliers from 1 to 10
+    list_of_multipliers = [i for i in range(1, 11)]
+    trials_per_multiplier = 3
+    time_taken_for_multiplier = []
+    for index, multiplier_val in enumerate(list_of_multipliers):
+        time_taken_for_multiplier.append([])
+        # Using overal time of infection as a guide.
+        # We prefer an expected infection lifetime of 10 time units.
+        logging.log(LOG_RUNS_DEBUG, 'Testing multiplier ' + str(multiplier_val))
+        for trial in range(trials_per_multiplier):
+            time_taken_for_multiplier_within_trial = []
+            for run in range(50):
+                random_population, _, _ = get_population(n=params['n'], p=params['p'])
+                random_infection_matrix = get_infection_matrix(random_population, S=params['S'])
+
+                simulation_stats = simulate(params, random_population, random_infection_matrix, time_incubation_period,
+                                            time_infection_period, time_detection_period, mode='Normal',
+                                            reproducible=reproducible, prob_multiplier = multiplier_val)
+                time_taken_for_multiplier_within_trial.append(simulation_stats.time_of_infection_overall)
+            time_taken_for_multiplier[index].append(sum(time_taken_for_multiplier_within_trial)/len(time_taken_for_multiplier_within_trial))
+
+    # print(list_of_multipliers)
+    # print(time_taken_for_multiplier)
+
+    # We identify the ideal multiplier through visual identification
+    multipliers_plot = plt.figure()
+    plt.ylabel('Time taken by infection overall')
+    plt.xlabel('Multiplier')
+    for index, multiplier in enumerate(list_of_multipliers):
+        for time_value in time_taken_for_multiplier[index]:
+            plt.plot([multiplier], [time_value], 'bo')
+    plt.xlim(0, 11)
+    plt.ylim(0, 50)
+    plt.show()

@@ -1,0 +1,50 @@
+Classes:
+Car
+-> Type
+-> Edges to travel = [13, 14]
+-> Current edge = 9 (.pop())
+-> Edges traveled = [9]
+
+-> Departure time, Arrival time, Travel time, Waiting time: (ex: [{'start':10 , 'end': 12}, {'start':20 , 'end': 23}])
+
+Traffic Jam
+-> Queue
+-> Start time
+-> End time
+
+--
+Events:
+
+-> C1 Car arrival edge
+--> CASE: Regular car: Start tracking. Add Departure
+---> CASE 1: No traffic jam -> Add Event C2
+---> CASE 2: Traffic jam -> Add Event C3
+
+-> C2 Car leaves edge
+--> CASE: Regular car and end of trip: Add Arrival time & calculate Travel time
+---> CASE: Car is a regular car and not at end of trip -> Do C1 directly (at current time)
+
+-> C3 Car arrives at queue -> Add to a "in traffic jam" queue
+--> CASE: Regular car -> Add a new waiting dictionary with a start time to the "waiting time" list.
+
+-> C4 Car leaves the queue -> Add Event G2 for car -> Check if someoneis queue and add event C4
+--> CASE: Regular car -> Add an end time to the last dictionary in the "waiting time" list.
+
+-> T1 Traffic Jam starts on point X of edge -> Add Event T2
+
+-> T2 Traffic Jam resolved -> Get first car and add C Event. 
+
+
+
+1.  For individual vehicles:  Monitor: 
+Travel time: Start time 
+Indicate which part of the travel time is caused by the delay.  
+Presentresults on the number of incidents they encounter on average (again: mean, standarddeviation, distribution).
+
+2.  For the network: distribution of the number of delayed vehicles at any arbitrary epoch.Formulated differently, we would like to see a table where you simulate fork= 0,1,2,...the fraction of time that exactly k vehicles are being delayed (consider it as being stuckin a traffic jam).
+s
+3.  For  incidents:  distribution  of  the  number  of  incidents  in  the  whole  network,  at  anyarbitrary epoch. This is similar to the previous question, but now for the fraction of timethat exactlykincidents are taking place simultaneously in the network.
+
+
+ASSUMPTION:
+Only 1 trafic jam on an edge.
