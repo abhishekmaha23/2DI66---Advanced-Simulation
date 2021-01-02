@@ -1,5 +1,0 @@
-Number of Route Travel Times -  1084445
-Mean of Route Travel Time - 66.38538704786964
-Standard Deviation of Route Travel Time - 13.051483311760196
-Halfwidth of Route Travel Time - 5.720064762890775
-Range -  60.66532228497887 72.10545181076041

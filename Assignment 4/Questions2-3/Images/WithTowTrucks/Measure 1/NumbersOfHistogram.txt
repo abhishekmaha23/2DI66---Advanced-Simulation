@@ -1,1 +1,0 @@
-Counts of number of delays [45692, 7844, 747]

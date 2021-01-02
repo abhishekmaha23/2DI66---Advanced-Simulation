@@ -1,4 +1,0 @@
-Mean of Number of Incidents - 9.394181892715347
-Standard Deviation of Number of Incidents - 0.3768916765307387
-Halfwidth of Number of Incidents - 0.16518006013981237
-Range -  9.229001832575534 9.55936195285516
