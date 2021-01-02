@@ -1,0 +1,248 @@
+from simulationentities import FES, Event, SimulationStatistics
+import logging
+from util import LOG_SIMULATION_DEBUG, LOG_SIMULATION_OUTPUT, LOG_EVENT_DEBUG, LOG_RUNS_DEBUG
+import time
+import numpy.random as npr
+
+def simulate(params, population, infection_matrix, time_incubation_period, time_infection_period,
+             time_detection_period, mode='Normal', reproducible=True, prob_multiplier=1):
+    # 2 modes defined
+    # Normal - for completely random population simulation
+    # Bonus - for the contact investigation simulation scenario (incubation period also detectable)
+
+    # Reproducibility
+    # True - The exponential distributions are initialized with the following format -
+    #   Seed for incubation = source + target IDs. This means the values will be different, yet the values should be
+    #   reasonably reproducible with variations between different combinations of people
+    #   Seed for incubation_period = 1
+    #   Seed for infection_period = 2
+    #   Seed for detection_period = 3
+    # False - No random_state defined for distribution
+
+    # Probability multiplier
+    # Default = 1 - As given originally. We test to identify the value of the multiplier that provides
+    #   an expected infection length of 10.
+
+    # Calculating time taken - temporary
+    start_time = time.time()
+
+    # Initializing Future Event Set to contain all possible events unfolding from first infection
+    n = len(population) - 2
+    fes = FES()
+    t = 0
+    p0_id = n + 1
+
+    # Initializing SimulationStatistics object to hold all information regarding simulation.
+    simulationLog = SimulationStatistics()
+    simulationLog.population = population
+
+    # We consider that patient-0 is incubated already, and perform the infection event at time 0.
+    number_of_events = 0
+
+    # Adding Infection event of patient-0 to FES
+    fes.add(Event(t, 'Infection', p0_id))
+
+    list_of_susceptible = [i for i in range(0, n + 1)]
+    list_of_incubated = [n + 1]
+    list_of_infected = []
+    list_of_quarantined_current = []
+    list_of_quarantined_overall = []
+    list_of_recovered = []
+
+    number_of_susceptible = n + 1
+    number_of_incubated = 1
+    number_of_infected = 0
+    number_of_quarantined_current = 0
+    number_of_quarantined_overall = 0
+    number_of_recovered = 0
+
+    logging.log(LOG_SIMULATION_OUTPUT, 'Initial set of values')
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_susceptible =' + str(number_of_susceptible))
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_incubated =' + str(number_of_incubated))
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_infected =' + str(number_of_infected))
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_quarantined_current =' + str(number_of_quarantined_current))
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_quarantined_overall =' + str(number_of_quarantined_overall))
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_recovered =' + str(number_of_recovered))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_susceptible-' + str(list_of_susceptible))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_incubated-' + str(list_of_incubated))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_infected-' + str(list_of_infected))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_quarantined_current-' + str(list_of_quarantined_current))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_quarantined_overall-' + str(list_of_quarantined_overall))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_recovered-' + str(list_of_recovered))
+    logging.log(LOG_SIMULATION_OUTPUT, '===')
+    logging.log(LOG_SIMULATION_OUTPUT, 'Beginning rest of simulation')
+
+    while number_of_infected > 0 or number_of_incubated > 0 or len(fes.events) > 0:
+
+        # Obtain next Event from FES
+        i = fes.next()
+
+        if i is None:
+            logging.warning('Next event in None, so exiting, this seems to be an error.')
+            break
+        if number_of_events % 50 == 0:
+            logging.log(LOG_SIMULATION_DEBUG, 'At event ' + str(number_of_events))
+
+        current_time = i.time
+        if current_time >= 10:
+            simulationLog.number_of_infected_at_time_10 = number_of_infected
+            simulationLog.number_of_incubated_at_time_10 = number_of_incubated
+
+        simulationLog.times.append(i.time)
+        simulationLog.events.append(i)
+
+        # Handling of incubation event
+        if i.label == "Incubation":
+            logging.log(LOG_SIMULATION_DEBUG, 'Event_number-' + str(number_of_events) + '- Incubation event of ' + str(i.target)
+                          + ' by ' + str(i.source))
+            # Event incubation happens for person i.target
+            # (t, 'Incubation',source, target)
+
+            # There is a possibility that it might already be infected by some other person, so error
+            # handling is needed.
+            if i.target in list_of_susceptible:
+                if i.target == n:
+                    logging.log(LOG_SIMULATION_OUTPUT, "Marko is incubated.")
+                    simulationLog.is_marko_infected_overall = True
+                    simulationLog.time_of_marko_infection = current_time
+                    if current_time < 10:
+                        simulationLog.is_marko_infected_by_time_10 = True
+                list_of_susceptible.remove(i.target)
+                list_of_incubated.append(i.target)
+
+                incubation_time = time_incubation_period.rvs()
+                fes.add(Event(current_time + incubation_time, 'Infection', i.target))
+
+                number_of_incubated += 1
+                number_of_susceptible -= 1
+                population[i.target].status = 'Inc'
+            else:
+                logging.log(LOG_SIMULATION_DEBUG,'Incubation of ' + str(i.target) + ' by ' + str(i.source) + ' was superseded ' +
+                              'by a previous incubation/recovery')
+        # Handling of infection event
+        elif i.label == "Infection":
+            logging.log(LOG_SIMULATION_DEBUG,'Event_number-' + str(number_of_events) + '- Infection event of ' + str(i.source))
+            # Event infection happens for person i.source
+            # (t, 'Infection', source)
+            infection_time = time_infection_period.rvs()
+            detection_time = time_detection_period.rvs()
+            list_of_infected.append(i.source)
+            list_of_incubated.remove(i.source)
+            number_of_infected += 1
+            number_of_incubated -= 1
+
+            population[i.source].status = 'Inf'
+            # Marko cannot be in quarantine
+            if detection_time < infection_time:
+                if population[i.source].is_marko is False:
+                    fes.add(Event(current_time + detection_time, 'Quarantine', i.source))
+                else:
+                    logging.log(LOG_SIMULATION_OUTPUT,"Marko is infected.")
+            # Add incubation events across the world if recovery doesn't happen first
+            for person_id in list_of_susceptible:
+                person = population[person_id]
+                if person.id != i.source:
+                    incubation_prob = infection_matrix[i.source, person.id]
+                    # Optimization - with numpy. In place of -
+                    # random_state_inc = None
+                    # person_dist = stats.expon(scale=1 / incubation_prob)
+                    # time_to_incubate = person_dist.rvs(random_state=random_state_inc)
+                    if reproducible is True:
+                        random_state_inc = i.source + person.id
+                        r = npr.RandomState(random_state_inc)
+                        time_to_incubate = r.exponential(scale=1 / (incubation_prob * prob_multiplier))
+                    else:
+                        time_to_incubate = npr.exponential(scale=1 / (incubation_prob * prob_multiplier))
+                    if time_to_incubate < detection_time and time_to_incubate < infection_time:
+                        fes.add(Event(current_time + time_to_incubate, 'Incubation', i.source, person.id))
+                else:
+                    logging.error("Error. Somehow the updating of the patient status hasn't happened.")
+                    logging.error(
+                        "Status of person" + person.status + "\t Status of source" + population[i.source].status)
+                    logging.error('Incubation Probability-' + str(incubation_prob) + '\tSource-' + str(
+                        i.source) + '\tTarget- ' + str(person.id))
+                    logging.error(str(time_to_incubate) + "-" + str(detection_time) + "-" + str(infection_time))
+                    # break
+            fes.add(Event(current_time + infection_time, 'Recovery', i.source))
+        # Handling of quarantine event
+        elif i.label == "Quarantine":
+            logging.log(LOG_SIMULATION_DEBUG, 'Event_number-' + str(number_of_events) + '- Quarantine event of ' + str(i.source))
+            # Event quarantine happens for person i.source
+            # (t, 'Quarantine', source)
+            population[i.source].status = 'Q'
+            list_of_quarantined_current.append(i.source)
+            list_of_quarantined_overall.append(i.source)
+            number_of_quarantined_current += 1
+            number_of_quarantined_overall += 1
+        # Handling of recovery event
+        elif i.label == "Recovery":
+            logging.log(LOG_SIMULATION_DEBUG,'Event_number-' + str(number_of_events) + '- Recovery event of ' + str(i.source))
+            # Event recovered happens for person i.source
+            # (t, 'Recovered', source)
+            if population[i.source].status == 'Q':
+                number_of_quarantined_current -= 1
+            population[i.source].status = 'R'
+            try:
+                index = list_of_quarantined_current.index(i.source)
+                list_of_quarantined_current.remove(i.source)
+            except:
+                # print('Not quarantined', i.source)
+                pass
+            list_of_recovered.append(i.source)
+            list_of_infected.remove(i.source)
+            number_of_recovered += 1
+            number_of_infected -= 1
+
+        # Housekeeping of all state variables and comprehensive logs
+        simulationLog.state_incubated_number.append(number_of_incubated)
+        simulationLog.state_incubated_set.append(list_of_incubated[:])
+        simulationLog.state_healthy_number.append(number_of_susceptible)
+        simulationLog.state_healthy_set.append(list_of_susceptible[:])
+        simulationLog.state_infected_number.append(number_of_infected)
+        simulationLog.state_infected_set.append(list_of_infected[:])
+        simulationLog.state_quarantined_number_current.append(number_of_quarantined_current)
+        simulationLog.state_quarantined_set_current.append(list_of_quarantined_current[:])
+        simulationLog.state_quarantined_number_overall.append(number_of_quarantined_overall)
+        simulationLog.state_quarantined_set_overall.append(list_of_quarantined_overall[:])
+        simulationLog.state_recovered_number.append(number_of_recovered)
+        simulationLog.state_recovered_set.append(list_of_recovered[:])
+
+        logging.log(LOG_EVENT_DEBUG, 'At end of event-' + str(number_of_events))
+        logging.log(LOG_EVENT_DEBUG, 'Time of event-' + str(current_time))
+        logging.log(LOG_EVENT_DEBUG, 'list_of_susceptible-' + str(list_of_susceptible))
+        logging.log(LOG_EVENT_DEBUG, 'list_of_incubated-'+ str(list_of_incubated))
+        logging.log(LOG_EVENT_DEBUG, 'list_of_infected-'+ str(list_of_infected))
+        logging.log(LOG_EVENT_DEBUG, 'list_of_quarantined_current-'+ str(list_of_quarantined_current))
+        logging.log(LOG_EVENT_DEBUG, 'list_of_quarantined_overall-' + str(list_of_quarantined_overall))
+        logging.log(LOG_EVENT_DEBUG, 'list_of_recovered-' + str(list_of_recovered))
+        logging.log(LOG_EVENT_DEBUG, '-----')
+
+        number_of_events += 1
+
+    logging.log(LOG_SIMULATION_OUTPUT, '----------------------------------------------')
+    logging.log(LOG_SIMULATION_OUTPUT, 'End simulation')
+    logging.log(LOG_SIMULATION_OUTPUT, '========')
+    logging.log(LOG_SIMULATION_OUTPUT, 'End set of values')
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_events =' + str(number_of_events))
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_susceptible =' + str(number_of_susceptible) + ' ' + str(len(list_of_susceptible)))
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_incubated =' + str(number_of_incubated) + ' ' + str(len(list_of_incubated)))
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_infected =' + str(number_of_infected) + ' ' + str(len(list_of_infected)))
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_quarantined_current =' + str(number_of_quarantined_current) + ' '
+                 + str(len(list_of_quarantined_current)))
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_quarantined_overall =' + str(number_of_quarantined_overall) + ' '
+                 + str(len(list_of_quarantined_overall)))
+    logging.log(LOG_SIMULATION_OUTPUT, 'number_of_recovered =' + str(number_of_recovered) + ' ' + str(len(list_of_recovered)))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_susceptible-' + str(list_of_susceptible))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_incubated-' + str(list_of_incubated))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_infected-' + str(list_of_infected))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_quarantined_current-' + str(list_of_quarantined_current))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_quarantined_overall-' + str(list_of_quarantined_overall))
+    logging.log(LOG_SIMULATION_OUTPUT, 'list_of_recovered-' + str(list_of_recovered))
+    simulationLog.time_of_infection_overall = current_time
+    simulationLog.number_untouched_by_virus = number_of_susceptible
+    simulationLog.number_quarantined_overall = number_of_quarantined_overall
+    simulationLog.number_infected_and_recovered = number_of_recovered
+
+    end_time = time.time() - start_time
+    logging.log(LOG_SIMULATION_DEBUG, 'Time taken for simulation: ' + str(end_time))
+    return simulationLog

@@ -1,0 +1,134 @@
+Assumptions for Q2
+-------------
+1. Variations (randomness) in average travel times for all links. // Sensitivity analysis
+2. Interarrival time (Cars leaving from A). Arrival rate (Departure rate). // Choose a decent distribution. Try for many.
+3. Distribution of incident times - Obtained from Q1. It is considered uniform across all links.
+	--- Interarrival time of start-times for incidents.
+	--- Duration time for incidents.
+// 3.5. Days of the week, different parameters per day. Depending on the traffic. (Rush hours)
+4. How exactly travel time is impacted by the occurrence of an incident along a link. // Use simple impact of incident from question.
+5. Interarrival time of random cars for all nodes (ghost cars that travel exactly one link and leave). It is considered uniform across all nodes.
+// Choose a decent distribution. Try for many. Same as 2.
+6. How exactly travel time is influenced by number of vehicles currently on the road.
+// Not affected based on simplest routing choice
+7. (IMPORTANT) - How vehicle routing is performed.
+	--- If incidents are not considered while routing, the shortest distance would be chosen every single time, if randomness does not cause enough variation.
+	--- If incidents are considered while routing, it could provide a reason to choose a different route based on the presence of incidents along a link.
+	// --- If incidents are not considered and variations are not considered before leaving, the same route is chosen every single time, but the actual travel time varies.
+
+
+Architecture
+----------
+1. Vehicle
+2. Road
+
+min, 
+random.uniform(min, max)
+standard_distribution(min+max/2)
+
+list_of_nodes = np.zeros(32,32)
+env.process(System)
+
+class System:
+	def car_link_start
+	def car_link_end
+	def link_incident_start
+
+Cars -  time_of_starting, time_of_ending
+
+Nodes - Start main cars, start ghost cars
+
+Links - hold information about incidents
+list_of_edges = list[] number_of_cars, incidents_on_link, locations_of_incidents, duration_of_incidents, history_of_incidents[]
+
+
+Tow Truck company - simpy.Resource() Send tow trucks 
+
+
+
+Assumptions for Q3
+-------------
+1. Tow service located at Gorinchem // Assumption
+2. Location of incidents(?) - Because time taken for a tow truck to travel to the incident is to be calculated and compared against the duration of the incident itself.
+// Uniformly distributed across all links.
+3. Time taken to travel 1/xth of the distance of a link is given by 1/xth (the average time + variation) (?)
+
+---> Reverse flow of traffic
+
+To calculate right now
+-------------
+1. Average time taken for every single link.
+2. Shortest path between A and B, considering just average times.
+
+Requirements based on assumptions above.
+-------------
+1. Distribution of incident start and end times (durations), so it can be simulated for all links.
+Distribution for start-times. Distribution for durations.
+2. One rate of departure for random vehicles valid for all links (they enter and leave after exactly one link of travel)
+3. One rate of departure from Den Bosch for cars that travel straight to Rotterdam.
+4. Randomness (variations) for travel times in all the links in the simplified graph network.
+
+Things we can get from Q1
+------------
+Incident distribution.
+
+
+
+
+
+We consider only the travel distances in our old-fashioned navigation device, and thus, we calculate the distances in our current graph of nodes, to identify the main route that our route cars are taking from Den Bosch to Rotterdam.
+
+Directly chosen routes from graph--
+Den Bosch to Empel - 5 km - 				9 - 14 min
+Riddenkerk to Rotterdam - 14.6 km -			12 - 20 min
+
+Other possible short routes--
+1. Empel - Deil - Gorinchem - Riddenkerk
+2. Empel - Hooipolder - Gorinchem - Riddenkerk
+3. Empel - Hooipolder - Zonzeel - Klaverpolder - Riddenkerk
+
+Route 1.
+Empel - Deil - 				26.4 km		17.3 km		8 - 10 min
+Deil - Gorinchem - 			23.3 km		19.5 km		9 - 12 min
+Gorinchem - Ridderkerk - 	29.9 km		28.4 km		14 - 18 min
+= 65.2 km / 31 - 40 min
+
+Route 2.
+Empel - Hooipolder - 	 39.8 km		32.0 km		16 - 22 min
+Hooipolder - Gorinchem - 30.2 km		18.6 km		9 - 12 min
+Gorinchem - Ridderkerk - 29.9 km		28.4 km		14 - 18 min
+= 79.0 km / 39 - 52 min
+
+Route 3.
+Empel - Hooipolder - 		39.8 km		39.8 km		16 - 22 min
+Hooipolder - Zonzeel - 		22.7 km		14.1 km		7 - 10 min
+Zonzeel - Klaverpolder - 	9.1 km		6.9 km		4 - 4 min
+Klaverpolder - Ridderkerk - 30.7 km		21.8 km		12 - 14 min
+= 82.6 km / 39 - 50 min
+
+Thus, route 1 is usually chosen by the navigation device.
+Both by distance, and by expected distribution of time, by not considering the time taken for incidents, route 1 would be the optimal chosen route.
+Route 1 is given by path between nodes 4-25-19-17-16-3.
+
+Max speed tow truck 100km/h to incident, 90 km/h on the way back (as source states max speed is 90 km/h when weight of trailor is below 3500 kg)
+https://www.rijksoverheid.nl/onderwerpen/verkeersregels/vraag-en-antwoord/wat-is-de-maximumsnelheid-voor-auto-s-op-de-snelweg
+
+
+
+TO DO
+1. Finish incident impact upon calculating travel times.
+--Add way to store incidents when they occur, and update the graph when they end.
+--Needs to be simple enough to find all incidents upon a single route so they can be added to the route.
+--Needs to be able to delete running incidents. An incident ending process will give the edge, and incident ID, and 
+	the incident must be removed from list of active incidents.
+A dict for each and every edge with a list containing a list of all incidents and active and inactive.
+It is assumed 
+2. Finish impact of tow trucks on incident durations. (Routing algorithm)
+3. Add statistics at every point to calculate system run statistics.
+4. Document all new and major assumptions made in the simulation.
+5. Try variations with all kinds of distributions of arrival rates and values and store values.
+
+
+Sets of parameters, sets of distributions for all the undecided stuff from the assignment
+Motivations for choosing parameters - for ghost cars, travel times, route car arrivals
+Confidence Intervals - motivating number of runs

@@ -1,0 +1,65 @@
+from populationdist import get_infection_matrix, get_population
+from simulation import simulate
+import logging
+from util import get_params, initialize_distributions
+from util import LOG_EVENT_DEBUG, LOG_SIMULATION_OUTPUT, LOG_SIMULATION_DEBUG, LOG_RUNS_DEBUG, LOG_RUNS_OUTPUT, LOG_RESULTS
+import time
+import matplotlib.pyplot as plt
+
+if __name__ == '__main__':
+    # Initialization
+    params = get_params(1)
+    reproducible = True
+    # Logging configuration
+    logging.addLevelName(LOG_EVENT_DEBUG, "EVENT_DEBUG")
+    logging.addLevelName(LOG_SIMULATION_DEBUG, "SIMULATION_DEBUG")
+    logging.addLevelName(LOG_SIMULATION_OUTPUT, "SIMULATION_OUTPUT")
+    logging.addLevelName(LOG_RUNS_DEBUG, "RUNS_DEBUG")
+    logging.addLevelName(LOG_RUNS_OUTPUT, "RUNS_OUTPUT")
+    logging.addLevelName(LOG_RESULTS, "RESULTS")
+    logging.basicConfig(level=LOG_RUNS_DEBUG, format='%(asctime)s :: %(levelname)s :: %(message)s')
+
+    # 0. Creating simple distributions for base functionality, virus dynamic periods
+    time_incubation_period, time_infection_period, time_detection_period = initialize_distributions(params, reproducible)
+
+    # Creating list of run sizes to test
+    list_of_run_sizes = [i for i in range(50, 550, 50)]
+    trials_per_run_size = 5
+    probability_of_infection_for_run_size = []
+    time_taken_for_run_size = []
+    for index, run_size in enumerate(list_of_run_sizes):  # 50
+        probability_of_infection_for_run_size.append([])
+        time_taken_for_run_size.append([])
+        # Number of trials per runsize from list.
+        for trial in range(trials_per_run_size): # 5
+            start_time = time.time()
+            number_of_marko_infections = 0
+            logging.log(LOG_RUNS_DEBUG, 'At trial ' + str(trial) + ' for run-size ' + str(run_size))
+            for run in range(run_size): # 0,1,2,... 49
+                # logging.log(LOG_RUNS_DEBUG, 'At runs - ' + str(run) + ', collecting information.')
+                # set_run_statistics[i]['probability_of']
+                random_population, _, _ = get_population(n=params['n'], p=params['p'], reproducible=reproducible)
+                random_infection_matrix = get_infection_matrix(random_population, S=params['S'])
+
+                simulation_stats = simulate(params, random_population, random_infection_matrix, time_incubation_period,
+                                            time_infection_period, time_detection_period, mode='Normal',
+                                            reproducible=reproducible, prob_multiplier=5)
+                if simulation_stats.is_marko_infected_overall is True:
+                    number_of_marko_infections += 1
+            time_taken_for_run_size[index].append(time.time() - start_time)
+            probability_of_infection_for_run_size[index].append(number_of_marko_infections/run_size)
+
+    # Identifying the best possible run sizes through visual inspection of plot
+    # Time taken allows us to make a compromise between accuracy vs time expense
+    print(list_of_run_sizes)
+    print(probability_of_infection_for_run_size)
+    print(time_taken_for_run_size)
+    runs_plot = plt.figure()
+    plt.ylabel('Probability of Marko getting infected')
+    plt.xlabel('Number of runs')
+    for index, run_size in enumerate(list_of_run_sizes):
+        for prob_value in probability_of_infection_for_run_size[index]:
+            plt.plot([run_size], [prob_value], 'ro')
+    plt.xlim(0, list_of_run_sizes[-1] + 50)
+    plt.ylim(0, 1.0)
+    plt.show()

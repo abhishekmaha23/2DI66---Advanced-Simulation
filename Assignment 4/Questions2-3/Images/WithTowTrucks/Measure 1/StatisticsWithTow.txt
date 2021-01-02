@@ -1,0 +1,93 @@
+Number of Route Travel Times -  1084445
+Mean of Route Travel Time - 66.38538704786964
+Standard Deviation of Route Travel Time - 13.051483311760196
+Halfwidth of Route Travel Time - 5.720064762890775
+Range -  60.66532228497887 72.10545181076041
+
+Estimate (1/2)
+--------------
+Number of Route Travel Times -  59682
+Mean of Route Travel Time - 65.99537851680356
+Standard Deviation of Route Travel Time - 11.133614118896183
+Halfwidth of Route Travel Time - 4.879521529000245
+Range -  61.11585698780331 70.8749000458038
+
+
+Number of Delay Travel Times -  59682
+Mean of Delay Travel Time - 3.0133385201706964
+Standard Deviation of Delay Travel Time - 10.72220247843199
+Halfwidth of Delay Travel Time - 4.699212427616968
+Range -  -1.6858739074462714 7.712550947787664
+
+
+Number of Delays -  59682
+Mean of Delay Travel Time - 0.2485674072584699
+Standard Deviation of Delay Travel Time - 0.49823761167985564
+Halfwidth of Delay Travel Time - 0.21836226105800688
+Range -  0.030205146200463023 0.46692966831647675
+
+Estimate (1/4)
+--------------
+Number of Route Travel Times -  120093
+Mean of Route Travel Time - 66.75130360013986
+Standard Deviation of Route Travel Time - 20.173926292578972
+Halfwidth of Route Travel Time - 8.841613030402272
+Range -  57.90969056973759 75.59291663054213
+
+
+Number of Delay Travel Times -  120093
+Mean of Delay Travel Time - 3.7538054492271993
+Standard Deviation of Delay Travel Time - 19.928991357278417
+Halfwidth of Delay Travel Time - 8.734265561984547
+Range -  -4.980460112757347 12.488071011211746
+
+
+Number of Delays -  120093
+Mean of Delay Travel Time - 0.2578418392412547
+Standard Deviation of Delay Travel Time - 0.5053149227048208
+Halfwidth of Delay Travel Time - 0.2214640293737541
+Range -  0.03637780986750061 0.4793058686150088
+
+Estimate (1/12)
+--------------
+Number of Route Travel Times -  359610
+Mean of Route Travel Time - 66.16153073291441
+Standard Deviation of Route Travel Time - 11.42513042805048
+Halfwidth of Route Travel Time - 5.007284184628739
+Range -  61.15424654828568 71.16881491754316
+
+
+Number of Delay Travel Times -  359610
+Mean of Delay Travel Time - 3.159858203518563
+Standard Deviation of Delay Travel Time - 10.998006325653268
+Halfwidth of Delay Travel Time - 4.820088793182146
+Range -  -1.6602305896635827 7.9799469967007095
+
+
+Number of Delays -  359610
+Mean of Delay Travel Time - 0.25114707599899894
+Standard Deviation of Delay Travel Time - 0.5064656666685339
+Halfwidth of Delay Travel Time - 0.22196836515235585
+Range -  0.029178710846643086 0.4731154411513548
+
+Estimate (1/24)
+--------------
+Number of Route Travel Times -  717796
+Mean of Route Travel Time - 65.86313327837556
+Standard Deviation of Route Travel Time - 13.007986269339947
+Halfwidth of Route Travel Time - 5.70100134353109
+Range -  60.16213193484447 71.56413462190665
+
+
+Number of Delay Travel Times -  717796
+Mean of Delay Travel Time - 2.861063702899486
+Standard Deviation of Delay Travel Time - 12.63991242762876
+Halfwidth of Delay Travel Time - 5.5396858698931695
+Range -  -2.6786221669936836 8.400749572792655
+
+
+Number of Delays -  717796
+Mean of Delay Travel Time - 0.2258845131485826
+Standard Deviation of Delay Travel Time - 0.48021779411453624
+Halfwidth of Delay Travel Time - 0.21046472780243985
+Range -  0.015419785346142745 0.43634924095102245

@@ -1,0 +1,81 @@
+from populationdist import get_infection_matrix, get_population
+from simulation import simulate
+import logging
+from util import get_params, initialize_distributions
+from util import LOG_EVENT_DEBUG, LOG_SIMULATION_OUTPUT, LOG_SIMULATION_DEBUG, LOG_RUNS_DEBUG, LOG_RUNS_OUTPUT, LOG_RESULTS
+import time
+import matplotlib.pyplot as plt
+import math
+
+if __name__ == '__main__':
+    # Initialization
+    for set_number in [1, 2, 3]:
+        params = get_params(set_number)
+        reproducible = True
+        # Logging configuration
+        logging.addLevelName(LOG_EVENT_DEBUG, "EVENT_DEBUG")
+        logging.addLevelName(LOG_SIMULATION_DEBUG, "SIMULATION_DEBUG")
+        logging.addLevelName(LOG_SIMULATION_OUTPUT, "SIMULATION_OUTPUT")
+        logging.addLevelName(LOG_RUNS_DEBUG, "RUNS_DEBUG")
+        logging.addLevelName(LOG_RUNS_OUTPUT, "RUNS_OUTPUT")
+        logging.addLevelName(LOG_RESULTS, "RESULTS")
+        logging.basicConfig(level=LOG_RUNS_DEBUG, format='%(asctime)s :: %(levelname)s :: %(message)s')
+
+        # 0. Creating simple distributions for base functionality, virus dynamic periods
+        time_incubation_period, time_infection_period, time_detection_period = initialize_distributions(params, reproducible)
+
+        # Simulate trials for testing out effect of latitude change in patient-0
+        # Attempting 50 tests
+        # With 300 runs
+        number_of_tests = 50
+        run_size = 300
+        lat_min = -0.5 * math.pi
+        iterate = 0
+        list_of_latitudes = []
+        probability_of_marko_infection_per_latitude = []
+        time_taken_for_marko_infection_per_latitude = []
+
+        # while lat_min <= (0.5*math.pi):
+        while iterate <= number_of_tests:
+            lat_inf = lat_min + (iterate / number_of_tests) * math.pi
+            logging.log(LOG_RUNS_DEBUG, 'Testing latitude ' + str(lat_inf))
+            # Creating new population each time with patient-0 at the calculated latitude and given longitude
+            lat_population, _, _ = get_population(n=params['n'], p=params['p'], lat_infected=lat_inf)
+            lat_infection_matrix = get_infection_matrix(lat_population, S=params['S'])
+            number_of_marko_infections = 0
+            time_of_marko_infections_internal = 0
+            for i in range(run_size):
+                simulation_stats = simulate(params, lat_population, lat_infection_matrix, time_incubation_period,
+                                            time_infection_period, time_detection_period, mode='Normal',
+                                            reproducible=reproducible, prob_multiplier=5)
+
+                if simulation_stats.is_marko_infected_overall is True:
+                    number_of_marko_infections += 1
+                    time_of_marko_infections_internal += simulation_stats.time_of_marko_infection
+            list_of_latitudes.append(lat_inf)
+            if number_of_marko_infections == 0:
+                print("Number of Marko infections is 0 from ", lat_inf)
+            else:
+                time_taken_for_marko_infection_per_latitude.append(time_of_marko_infections_internal/number_of_marko_infections)
+            probability_of_marko_infection_per_latitude.append(number_of_marko_infections/run_size)
+            iterate += 1
+
+        # print(list_of_latitudes)
+        # print(time_taken_for_marko_infection_per_latitude)
+        # print(probability_of_marko_infection_per_latitude)
+
+        # Plotting statistics of probability against latitude variation
+        time_plot = plt.figure()
+        plt.ylabel('Time taken for Marko getting infected')
+        plt.xlabel('Latitude')
+        for index, time_value in enumerate(time_taken_for_marko_infection_per_latitude):
+            plt.plot([list_of_latitudes[index]], [time_value], 'ro')
+        plt.ylim(0)
+        plt.show()
+        prob_plot = plt.figure()
+        plt.ylabel('Probability of Marko getting infected')
+        plt.xlabel('Latitude')
+        for index, prob_value in enumerate(probability_of_marko_infection_per_latitude):
+            plt.plot([list_of_latitudes[index]], [prob_value], 'bo')
+        plt.ylim(0, 1)
+        plt.show()
